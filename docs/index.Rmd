@@ -6,6 +6,7 @@ output:
       highlightStyle: github
       countIncrementalSlides: true
     seal: false 
+font : Josefin Sans
 ---
 
 layout: true 
@@ -30,6 +31,7 @@ library(tmap)
 library(leaflet)
 library(dplyr)
 library(stringr)
+library(ggplot2)
 
 #,dpi=600,fig.width=7,fig.height =4
 ```
@@ -37,8 +39,13 @@ library(stringr)
 ```{r warning=FALSE,message=FALSE,echo=FALSE,results= FALSE}
 #retrieving the shae files
 summary_shape <- sf::st_read("../Household_listing_slides/summary_shp2/summary_shape.shp")
-boundary <- sf::st_read("../Household_listing_slides/summary_shp2/Uganda_Boundary(I).shp")
+district_shape <- sf::st_read("../Household_listing_slides/summary_shp2/listing_data_summary_data.shp")
 branch_shape <- sf::st_read("../Household_listing_slides/summary_shp2/lg_districts.shp")
+boundary <- sf::st_read("../Household_listing_slides/summary_shp2/Uganda_Boundary(I).shp")
+
+dt_sm <- sf::st_read("../Household_listing_slides/summary_shp2/listing_data.shp")
+dists_dta <- readRDS("../Household_listing_slides/distance_dta.rds")
+priority_dta <- readRDS("../Household_listing_slides/priority_dta.rds")
 ```
 
 ```{r warning=FALSE,message=FALSE,echo=FALSE,results= FALSE}
@@ -68,7 +75,7 @@ branch_shape_revised <- branch_shape %>% mutate(Listed = case_when(str_to_title(
 # Demographics 
 
 .pull-left[
-```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=6,fig.height =6,eval=require('leaflet')}
+```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=5.3,fig.height =5.5,eval=require('leaflet')}
 options(htmltools.dir.version = FALSE,htmltools.preserve.raw= FALSE) 
 
 
@@ -86,11 +93,161 @@ boundary %>%
 
 .pull-right[
 
-The listing exercise was carried out in 11 of the 19 Districts. 4 of the 11 districts were the RCT branches.A total of 330,055 households were listed so far, with [26%(87,691) ]{style="color:red"} of the households having no consent given. Majority of these are from Wakiso district(51%)
+<font size="4", class="left"> The listing exercise was carried out in 11 of the 19 Districts.
+
+4 of the 11 districts were the RCT branches.A total of 330,055 households were listed so far, with [26%(87,691) ]{style="color:red"} of the households having no consent given. 
+
+Majority of these are from Wakiso district(51%) </font>
 
 ]
 
-.left-column and .right-column provide 55% and 75% width
 
 
+---
+
+## Gender 
+
+.pull-left[
+```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=5.3,fig.height =5.5,eval=require('leaflet')}
+options(htmltools.dir.version = FALSE,htmltools.preserve.raw= FALSE) 
+
+pal <- colorFactor(palette = c("deepskyblue3","red"),levels = c("Male","Female"))
+
+boundary %>% 
+  leaflet() %>% 
+  addProviderTiles(provider = providers$OpenStreetMap) %>% 
+  addPolygons(fillOpacity = 0,color = "black",weight = 1) %>% 
+  addPolygons(fillColor = ~pal(gender),color= "black",weight = 1,fillOpacity = .9,stroke = T,data = dt_sm)
+```
+]
+
+.pull-right[
+
+<font size="4", class="left"> Majority of the households (53%) listed had males as the Household heads in most of the districts. This is lower than country percentage of 72% as published by UBOS. In the LG districts ,Wakiso(63%) and Mukono(54%) were the only districts where the females were the heads </font>
+
+]
+
+
+---
+
+## Level of Education 
+.pull-left[
+```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=5.3,fig.height =5.5,eval=require('leaflet')}
+options(htmltools.dir.version = FALSE,htmltools.preserve.raw= FALSE) 
+
+pal <- colorFactor(palette = c("deepskyblue3","red"),levels = unique(dt_sm$hh_dctn))
+
+boundary %>% 
+  leaflet() %>% 
+  addProviderTiles(provider = providers$OpenStreetMap) %>% 
+  addPolygons(fillOpacity = 0,color = "black",weight = 1) %>% 
+  addPolygons(fillColor = ~pal(hh_dctn),color= "black",weight = 1,fillOpacity = .9,stroke = T,data = dt_sm)
+```
+]
+
+.pull-right[
+
+<font size="4", class="left"> 9 in 20 Households are headed by individuals whose highest level of education is Primary. This cuts across majority of the districts listed apart from Kampala where the majority are Secondary graduates. </font>
+
+]
+
+---
+
+## Understanding Coverage -  Priority Housebholds
+.pull-left[
+```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=5.3,fig.height =5.5,eval=require('leaflet')}
+options(htmltools.dir.version = FALSE,htmltools.preserve.raw= FALSE) 
+
+pal <- colorQuantile(palette = "YlOrRd",domain = dt_sm$per,reverse = T)
+
+boundary %>% 
+  leaflet() %>% 
+  addProviderTiles(provider = providers$OpenStreetMap) %>% 
+  addPolygons(fillOpacity = 0,color = "black",weight = 1) %>% 
+  addPolygons(fillColor = ~pal(per),color= "black",weight = 1,fillOpacity = .9,stroke = T,data = dt_sm)
+```
+]
+
+.pull-right[
+
+<font size="4", class="left"> 1 in 3 Households listed were discovered to be registered by the VHTs. Iganga has the highest percentage of registered at 74% followed by Mbale at 67%.Lira on the other hand has the lowest percentage of registered households that were listed at 11%. </font>
+
+]
+
+
+---
+
+## Under5s and WPA
+
+```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=10,fig.height =5}
+priority_dta %>% 
+  tidyr::pivot_longer( cols =  c(-cat,-District)) %>% 
+  mutate(cat= factor(cat,levels = c("lg","list"),labels = c("LG Program Data","Listing Data")),
+         name = factor(name,levels = c("under5_HHs","WRA_HHs"),labels = c("Under5s","Women of Reproductive Age"))) %>% 
+  ggplot(aes(value,District,fill = cat))+
+  geom_col(width = .5,position = "dodge")+
+  geom_text(aes(label = value),size = 3,position = position_dodge(width = .5),hjust = -.1)+theme_minimal()+
+  theme(legend.title = element_blank(),legend.position = "top")+
+  #scale_fill_brewer(palette = "Set1")+
+  scale_fill_manual(values = c("deepskyblue3","orange"))+
+  scale_x_continuous(limits = c(0,450),expand = c(0,0))+labs(y= "District", x = "Total Per VHT")+
+  facet_wrap(. ~ name,scales = "free_y")
+```
+
+---
+
+## Distances & Proximity 
+
+<font size="3"> 
+The average distance from a VHT to a family/ client is 499m where as from a client to a health facility, it is 558m.
+VHTs in Mbale travel the shortest distances(297m) to their clients as opposed to Sironko(729m) given the mountainous nature of the district.
+On average clients in Iganga travel longer distances to reach the nearest Health facility whereas those in Mityana are much closer to the facilities
+</font>   
+```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=10,fig.height =4}
+dists_dta %>% 
+tidyr::pivot_longer(cols = -1) %>% mutate(name = factor(name,levels = c('chw_dist','hf_dist'),labels = c("Avg. Distance to CHW","Nearest Distance to Health Facility"))) %>% # View()
+  ggplot(aes(District,value,fill = name))+
+  geom_col(position = "dodge",width = .5)+
+  geom_text(aes(label = paste0( formatC(round(value),digits = 5,big.mark=","),"m")),position = position_dodge(width = .5),vjust = -.5,size =3)+theme_minimal()+
+  theme(legend.position = "bottom",legend.title = element_blank())+
+  scale_fill_brewer(palette = "Set1")+scale_y_continuous(limits = c(0,9300),expand = c(0,0))+labs(x = "Districts",y = "Distances(meters)")
+```
+
+
+
+---
+
+## Usecases
+
+this is a comment
+
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+tmap_mode("view")
+tm_shape(nyc_sf) +
+  tm_polygons("rent2008")
+```
+
+---
+
+## Leanings from the Program data
+
+this is a comment
+
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+tmap_mode("view")
+tm_shape(nyc_sf) +
+  tm_polygons("rent2008")
+```
+
+---
+
+## Key takeaways
+
+this is a comment
+
+```{r warning=FALSE,message=FALSE,echo=FALSE}
+tmap_mode("view")
+tm_shape(nyc_sf) +
+  tm_polygons("rent2008")
+```
 
