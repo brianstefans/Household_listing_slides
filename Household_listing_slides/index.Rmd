@@ -1,0 +1,96 @@
+---
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      countIncrementalSlides: true
+    seal: false 
+---
+
+layout: true 
+
+
+---
+class: right, bottom
+background-image: url(LG4196-min.jpg)
+background-size: cover
+
+# Household Listing report(draft i) 
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(cache=FALSE,cache.lazy=FALSE,warning=FALSE,message=FALSE,echo=FALSE)
+options(htmltools.dir.version = FALSE,htmltools.preserve.raw= FALSE) 
+
+library(geodaData)
+library(sf)
+library(tmap)
+library(leaflet)
+library(dplyr)
+library(stringr)
+
+#,dpi=600,fig.width=7,fig.height =4
+```
+
+```{r warning=FALSE,message=FALSE,echo=FALSE,results= FALSE}
+#retrieving the shae files
+summary_shape <- sf::st_read("./summary_shp2/summary_shape.shp")
+boundary <- sf::st_read("./summary_shp2/Uganda_Boundary(I).shp")
+branch_shape <- sf::st_read("./summary_shp2/lg_districts.shp")
+```
+
+```{r warning=FALSE,message=FALSE,echo=FALSE,results= FALSE}
+#data cleaning and creation 
+branch_shape_revised <- branch_shape %>% mutate(Listed = case_when(str_to_title(DName2019) %in% summary_shape$Distrct~"Yes",TRUE~"No")) 
+```
+
+
+---
+
+# Objectives of the Exercise.
+
+
+-   To systematically list and capture key geographic, demographic, social and health indicators across all households in each village.
+
+-   To define village boundaries to facilitate generation of shape files by collecting GPS points around all village boundaries.
+
+-   To establish the household coverage in the villages where LG operates.
+
+-   To conduct a validation of attended priority households against all priority households in the community.
+
+-   To capture relevant points of interest (POI) in each community including the location of VHT and relevant infrastructure (health centers/hospitals, static and outreach immunization centers, private clinics, pharmacies, other POI).
+
+
+---
+
+# Demographics 
+
+.pull-left[
+```{r warning=FALSE,message=FALSE,echo=FALSE,fig.width=6,fig.height =6,eval=require('leaflet')}
+options(htmltools.dir.version = FALSE,htmltools.preserve.raw= FALSE) 
+
+
+pal <- colorFactor(palette = c("deepskyblue3","red"),levels = c("Yes","No"))
+
+boundary %>%
+  leaflet() %>%
+  addProviderTiles(provider = providers$OpenStreetMap) %>%
+  addPolygons(fillOpacity = 0,color = "black",weight = 1) %>%
+  addPolygons(fillColor = ~pal(Listed),color= "black",weight = 1,fillOpacity = .9,stroke = T,data = branch_shape_revised)
+
+#leaflet() %>% addTiles() %>% setView(lat = 30.2621, lng = -97.7382, zoom = 17)
+```
+]
+
+.pull-right[
+
+The listing exercise was carried out in 11 of the 19 Districts. 4 of the 11 districts were the RCT branches.A total of 330,055 households were listed so far, with [26%(87,691) ]{style="color:red"} of the households having no consent given. Majority of these are from Wakiso district(51%)
+
+]
+
+.left-column and .right-column provide 55% and 75% width
+
+
+
